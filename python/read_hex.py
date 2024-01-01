@@ -39,13 +39,13 @@ for data_line in file:
         offset_address = memory_address - MEM_START_OFFSET
         
         while(full_data_address != offset_address):
-            input()
-            print(full_data_address, offset_address)
+            # input()
+            # print(full_data_address, offset_address)
 
             full_data += ['0', '0'] # Add null byte
             full_data_address += 1 # Add byte
 
-        print(int_to_hexstr(memory_address, 8))
+        # print(int_to_hexstr(memory_address, 8))
         data = data_line[8:8 + 2 * data_length_int]
         full_data += data
 
@@ -110,3 +110,5 @@ for row in full_data_split:
 f = open("16_bit_aligned.hex", "w")
 f.write(out_file)
 f.close()
+
+print("DONE")

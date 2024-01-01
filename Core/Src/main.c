@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-// #include "bootloader.h"
+#include "bootloader.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,7 +96,7 @@ int main(void)
 
   HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, 1);
   HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, 1);
-  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 0);
+  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -106,7 +106,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    // loop();
+    bootloader_loop();
   }
   /* USER CODE END 3 */
 }
@@ -222,7 +222,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : DIP_3_Pin */
   GPIO_InitStruct.Pin = DIP_3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(DIP_3_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LED_R_Pin LED_G_Pin LED_B_Pin */
@@ -239,27 +239,6 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
-}
 
 /**
   * @brief  This function is executed in case of error occurrence.

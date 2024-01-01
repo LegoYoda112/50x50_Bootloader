@@ -61,8 +61,8 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 32K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 128K
+RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 31K
+FLASH (rx)     : ORIGIN = 0x8000000, LENGTH = 128K
 }
 
 /* Define output sections */
@@ -75,6 +75,11 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >FLASH
+
+  .bootBlockRAM (NOLOAD):
+  {
+    KEEP(*(.bootBlockRAM))
+  } > RAM
 
   /* The program code and other data goes into FLASH */
   .text :

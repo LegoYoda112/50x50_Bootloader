@@ -1,4 +1,13 @@
 #include "bootloader.h"
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
+#include "usbd_conf.h"
+#include "stdbool.h"
+
+unsigned char __attribute__((section(".bootBlockRAM"))) boot_bits[10];
+
+// Grab usb device pointer
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 enum bootloaderState bootloader_state;
 typedef void (*pFunction)(void);
@@ -16,6 +25,7 @@ static uint32_t GetPage(uint32_t Addr)
 }
 
 void process_USB_rx(uint8_t* Buf, uint32_t *Len){
+    __disable_irq();
 
     // Clear 
     if(Buf[0] == 'C' && Buf[1] == 'L' && Buf[2] == 'R'){
@@ -24,8 +34,13 @@ void process_USB_rx(uint8_t* Buf, uint32_t *Len){
     }
 
     // 
-    if(Buf[0] == 'L' && Buf[1] == 'O' && Buf[2] == 'D'){
-        bootloader_jump_to_user_app();
+    if(Buf[0] == 'A' && Buf[1] == 'P' && Buf[2] == 'P'){
+        // Set ram blocks to request bootloader to run
+        boot_bits[0] = 'A';
+        boot_bits[1] = 'P';
+        boot_bits[2] = 'P';
+        HAL_NVIC_SystemReset();
+        // bootloader_jump_to_user_app();
     }
 
     // Receive ihex data
@@ -94,6 +109,11 @@ void bootloader_jump_to_user_app(void)
     HAL_GPIO_DeInit(LED_R_GPIO_Port, LED_R_Pin);
     HAL_GPIO_DeInit(LED_G_GPIO_Port, LED_G_Pin);
     HAL_GPIO_DeInit(LED_B_GPIO_Port, LED_B_Pin);
+    HAL_GPIO_DeInit(DIP_3_GPIO_Port, DIP_3_Pin);
+
+    USBD_DeInit(&hUsbDeviceFS);
+    USBD_LL_DeInit(&hUsbDeviceFS);
+
     HAL_FDCAN_DeInit(&hfdcan1);
     HAL_RCC_DeInit();
     HAL_DeInit();
@@ -121,8 +141,27 @@ void bootloader_jump_to_user_app(void)
 
 }
 
-void bootloader_init(){
+bool bootloader_requested(){
+    // If DIP_3 is ON, skip boot bits check and run bootloader
+    if(!HAL_GPIO_ReadPin(DIP_3_GPIO_Port, DIP_3_Pin)){
+        return true;
+    }
 
+    // If boot bits are set for bootloader (BTL), run bootloader
+    // if they aren't set, run app
+    if(boot_bits[0] == 'B' && boot_bits[1] == 'T' && boot_bits[2] == 'L'){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void bootloader_init(){
+    if(bootloader_requested()){
+        // Continue
+    }else{
+        bootloader_jump_to_user_app();
+    }
 }
 
 void bootloader_loop(){

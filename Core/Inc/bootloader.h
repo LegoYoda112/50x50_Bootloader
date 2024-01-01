@@ -8,7 +8,7 @@ extern FDCAN_HandleTypeDef hfdcan1;
 
 ///////////// Defines
 #define APP_START_ADDR   0x8008000
-#define APP_END_ADDR    (0x8008000 + 92 * FLASH_PAGE_SIZE - 1)
+#define APP_END_ADDR    (0x8008000 + 46 * FLASH_PAGE_SIZE - 1)
 #define ADDR_FLASH_PAGE_63    ((uint32_t)0x0801F800)
 
 ///////////// Variables
