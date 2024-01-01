@@ -1,0 +1,5 @@
+Middlewares/ST/STM32_USB_Device_Library
+Drivers/CMSIS
+Drivers/STM32G4xx_HAL_Driver
+.vscode
+build
