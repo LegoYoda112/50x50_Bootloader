@@ -5,6 +5,8 @@
 
 ///////////// Externs in
 extern FDCAN_HandleTypeDef hfdcan1;
+extern uint8_t TxData[8];
+extern FDCAN_TxHeaderTypeDef TxHeader;
 
 ///////////// Defines
 #define APP_START_ADDR   0x8008000
@@ -15,7 +17,8 @@ extern FDCAN_HandleTypeDef hfdcan1;
 // Bootloader state variable
 enum bootloaderState{
     init,
-    idle
+    idle,
+    flashing
 };
 
 extern enum bootloaderState bootloader_state;
@@ -62,5 +65,8 @@ void bootloader_jump_to_user_app(void);
  * @param Len Length of buffer
  */
 void process_USB_rx(uint8_t* Buf, uint32_t *Len);
+
+
+void process_CAN_rx(FDCAN_RxHeaderTypeDef *Rxheader, uint8_t RxData[]);
 
 #endif

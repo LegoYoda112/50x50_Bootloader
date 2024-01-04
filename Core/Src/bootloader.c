@@ -4,6 +4,8 @@
 #include "usbd_conf.h"
 #include "stdbool.h"
 
+#include "can.h"
+
 unsigned char __attribute__((section(".bootBlockRAM"))) boot_bits[10];
 
 // Grab usb device pointer
@@ -19,21 +21,99 @@ __IO uint64_t data64 = 0;
 
 static FLASH_EraseInitTypeDef EraseInitStruct;
 
+bool flashing_firmware = false;
+uint8_t words_ready = 0;
+uint64_t double_word = 0;
+uint8_t null_counter = 0;
+
 static uint32_t GetPage(uint32_t Addr)
 {
   return (Addr - FLASH_BASE) / FLASH_PAGE_SIZE;;
 }
 
+int CAN_Transmit_Safe(FDCAN_TxHeaderTypeDef *TxHeader, uint8_t *TxData)
+{
+    // If we have filled up the mailboxes, return early, CAN is not connected
+    if(HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0){
+        // drive_state == drive_state_idle;
+        return 0;
+    }
+
+    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, TxHeader, TxData) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    return 1;
+}
+
+void can_ack(){
+    TxData[0] = 'O';
+    TxData[1] = 'K';
+    TxHeader.Identifier = 69;
+    TxHeader.DataLength = FDCAN_DLC_BYTES_2;
+    CAN_Transmit_Safe(&TxHeader, TxData);
+}
+
+void process_CAN_rx(FDCAN_RxHeaderTypeDef *RxHeader, uint8_t RxData[]){
+
+    if(RxHeader->Identifier == 69){
+        if(RxHeader->DataLength == FDCAN_DLC_BYTES_0){
+            flashing_firmware = false;
+        }
+
+        if(flashing_firmware){
+            __disable_irq();
+            double_word = 0;
+            for(int i = 0; i < 8; i++){
+                double_word = double_word | ((uint64_t)RxData[i] << (i * 8));
+            }
+
+            // Calculate flash address
+            uint32_t offset_address = (uint32_t)APP_START_ADDR + Address;
+
+            // Flash
+            HAL_FLASH_Unlock();
+            if(HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, offset_address, double_word) != HAL_OK){
+                Error_Handler();
+            }
+            HAL_FLASH_Lock();
+            __enable_irq();
+
+            Address += 8;
+        }
+
+        ////////// Clear memory
+        if(RxData[0] == 'C' && RxData[1] == 'L' && RxData[2] == 'R'){
+            erase_flash();
+            Address = 0;
+            flashing_firmware = true;
+        }
+
+        ////////// Jump to app 
+        if(RxData[0] == 'A' && RxData[1] == 'P' && RxData[2] == 'P'){
+            // Set ram blocks to request app to run
+            boot_bits[0] = 'A';
+            boot_bits[1] = 'P';
+            boot_bits[2] = 'P';
+            can_ack();
+            HAL_NVIC_SystemReset();
+        }
+
+        
+        can_ack();
+    }
+}
+
 void process_USB_rx(uint8_t* Buf, uint32_t *Len){
     __disable_irq();
 
-    // Clear 
+    ////////// Clear 
     if(Buf[0] == 'C' && Buf[1] == 'L' && Buf[2] == 'R'){
         erase_flash();
         Address = 0;
     }
 
-    // 
+    ////////// Jump to app 
     if(Buf[0] == 'A' && Buf[1] == 'P' && Buf[2] == 'P'){
         // Set ram blocks to request bootloader to run
         boot_bits[0] = 'A';
@@ -162,15 +242,24 @@ void bootloader_init(){
     }else{
         bootloader_jump_to_user_app();
     }
+
+    __enable_irq();
+    init_and_start_can();
 }
 
 void bootloader_loop(){
+    if(flashing_firmware){
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 0);
+        HAL_Delay(100);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 1);
+        HAL_Delay(200);
+    } else {
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 0);
+        HAL_Delay(100);
+        HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, 1);
+        HAL_Delay(900);
+    }
 
-    // Blink Twice
-    HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
-    HAL_Delay(100);
 }
 
 void erase_flash(){
